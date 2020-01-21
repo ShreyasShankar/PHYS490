@@ -9,7 +9,7 @@ def get_args():
     Parse arguments from CLI
     '''
     parser = argparse.ArgumentParser(
-        description='Compute regression coefficients analytically and with stochastic gradient descent')
+        description='This program computes least squares regression coefficients for a regression problem analytically, and with stochastic gradient descent using the hyperparameters provided')
     parser.add_argument('in_file', type=str,
                         help='path to .in file containing dataset')
     parser.add_argument('json_file', type=str,
@@ -37,19 +37,18 @@ def loadData(args):
 
 def analyticSolution(features, targets):
     '''
-    Compute the analytic solution to multiple linear regression
+    Compute linear regression weights analytically, rounded to 4 decimals
     '''
     gram_mat = np.dot(features.T, features)  # Compute the Gram matrix
     moment_mat = np.dot(features.T, targets)  # Compute the moment matrix
-    w_analytic = np.around(np.dot(np.linalg.inv(
-        gram_mat), moment_mat), 4)
+    w_analytic = np.dot(np.linalg.inv(gram_mat), moment_mat)
 
-    return w_analytic
+    return np.around(w_analytic, 4)
 
 
 def sgdSolution(json_file, features, targets):
     '''
-    Compute the weights of the linear regression problem using stochastic gradient descent
+    Compute linear regression weights using stochastic gradient descent, rounded to 4 decimals
     '''
     # Load json file and extract hyperparameters
     with open(json_file, 'r') as f:
@@ -60,12 +59,12 @@ def sgdSolution(json_file, features, targets):
     # Initialize new weight vector to random values
     w_sgd = np.random.uniform(size=(features.shape[1],))
     while epochs:
-        # Stochastic selection of feature-target index
+        # Stochastic selection of index of feature-target pair
         idx = np.random.randint(0, len(targets))
         x = features[idx, :]
         y = targets[idx]
 
-        # Compute predicted target, gradient, and update weights
+        # Compute predicted target, gradient of cost function, and update weights
         predicted_y = np.dot(w_sgd.T, x)
         gradient = (predicted_y - y) * x
         w_sgd -= alpha * gradient
@@ -77,7 +76,7 @@ def sgdSolution(json_file, features, targets):
 
 def makeOutFile(args, w_analytic, w_sgd):
     '''
-    Create a .out file in the same directory as the .in file, storing the analytic coefficients followed by the sgd coefficients
+    Create .out file in the same directory as the .in file, storing the analytic coefficients followed by the sgd coefficients
     '''
     out_file = os.path.splitext(args.in_file)[0] + '.out'
     with open(out_file, 'w+') as f:
