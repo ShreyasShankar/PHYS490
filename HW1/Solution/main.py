@@ -81,9 +81,10 @@ def makeOutFile(args, w_analytic, w_sgd):
     '''
     out_file = os.path.splitext(args.in_file)[0] + '.out'
     with open(out_file, 'w+') as f:
-        f.write(str(w_analytic))
-        f.write('\n\n')
-        f.write(str(w_sgd))
+        for i in list(w_analytic):
+            f.write('{:.4f}\n'.format(i))
+        for i in list(w_sgd):
+            f.write('\n{:.4f}'.format(i))
 
 
 def run():
