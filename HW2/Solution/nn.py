@@ -22,7 +22,7 @@ class Net(nn.Module):
         ReLU
         Dropout
         Fully-connected
-        Log Softmax
+        Softmax
     '''
 
     def __init__(self):
@@ -32,39 +32,39 @@ class Net(nn.Module):
 
         # Build convolution layers with activations, pooling, and dropout
         self.cnn = nn.Sequential(
-            # First convolution layer with 10 filters, kernel 3, stride 1, padded
-            nn.Conv2d(1, 10, kernel_size=3, padding=1),
+            # First convolution layer with 10 filters, kernel 5, stride 1, padded
+            nn.Conv2d(1, 10, kernel_size=5, padding=1),
             # ReLU
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             # MaxPool 12*12*10 to 6*6*10
             nn.MaxPool2d(kernel_size=2, stride=2),
             # Batch Normalization
             nn.BatchNorm2d(num_features=10),
-            # Second convolution layer with 20 filters, kernel 5, stride 1, no pad
-            nn.Conv2d(10, 20, kernel_size=5),
+            # Second convolution layer with 20 filters, kernel 3, stride 1, no pad
+            nn.Conv2d(10, 20, kernel_size=3),
             # MaxPool 4*4*20 to 2*2*20
             nn.MaxPool2d(kernel_size=2, stride=2),
             # ReLU
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             # Batch Normalization
             nn.BatchNorm2d(num_features=20),
             # Flatten
             nn.Flatten(),
             # Dropout 15%
-            nn.Dropout(0.15, inplace=True))
+            nn.Dropout(0.15, inplace=False))
 
         # Build fully-connected layers with activations and dropout
         self.fc = nn.Sequential(
             # Fully-connected linear layer
             nn.Linear(2*2*20, 128),
             # ReLU
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             # Dropout 50%
-            nn.Dropout(inplace=True),
+            nn.Dropout(inplace=False),
             # Final fully-connected linear layer
             nn.Linear(128, 5),
-            # Log Softmax
-            nn.LogSoftmax())
+            # Softmax
+            nn.Softmax(dim=1))
 
     def forward(self, x):
         ''' Compute feedforward '''
@@ -72,13 +72,13 @@ class Net(nn.Module):
         output = self.fc(output)
         return output
 
-    def train(self, data, loss, epoch, optimizer, device):
+    def backprop(self, data, loss, optimizer, device):
         ''' Train network with backpropagation '''
         # Set model to training mode
         self.train()
         # Get inputs and send them to the appropriate device (cpu or cuda)
-        inputs = torch.from_numpy(data.x_train)
-        targets = torch.from_numpy(data.y_train)
+        inputs = data.x_train
+        targets = data.y_train
         inputs = inputs.to(device)
         targets = targets.to(device)
         # Compute model output from given inputs
@@ -94,15 +94,15 @@ class Net(nn.Module):
         # Return loss for tracking and visualizing
         return obj_val.item()
 
-    def test(self, data, loss, epoch, device):
+    def test(self, data, loss, device):
         ''' Test network on cross-validation data '''
         # Set model to evaluation mode
         self.eval()
         # Deactivate autograd engine
         with torch.no_grad():
             # Get inputs and send them to the appropriate device (cpu or cuda)
-            inputs = torch.from_numpy(data.x_test)
-            targets = torch.from_numpy(data.y_test)
+            inputs = data.x_test
+            targets = data.y_test
             inputs = inputs.to(device)
             targets = targets.to(device)
             # Compute model output from given inputs
