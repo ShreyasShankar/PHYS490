@@ -72,7 +72,7 @@ class Net(nn.Module):
         output = self.fc(output)
         return output
 
-    def train(self, data, loss, epoch, optimizer, device='cpu'):
+    def train(self, data, loss, epoch, optimizer, device):
         ''' Train network with backpropagation '''
         # Set model to training mode
         self.train()
@@ -94,7 +94,7 @@ class Net(nn.Module):
         # Return loss for tracking and visualizing
         return obj_val.item()
 
-    def test(self, data, loss, epoch, device='cpu'):
+    def test(self, data, loss, epoch, device):
         ''' Test network on cross-validation data '''
         # Set model to evaluation mode
         self.eval()
