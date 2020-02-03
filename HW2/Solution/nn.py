@@ -2,7 +2,6 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class Net(nn.Module):
@@ -27,7 +26,11 @@ class Net(nn.Module):
     '''
 
     def __init__(self):
+        ''' Initialize network sequentially '''
+        # Inherit
         super(Net, self).__init__()
+
+        # Build convolution layers with activations, pooling, and dropout
         self.cnn = nn.Sequential(
             # First convolution layer with 10 filters, kernel 3, stride 1, padded
             nn.Conv2d(1, 10, kernel_size=3, padding=1),
@@ -50,6 +53,7 @@ class Net(nn.Module):
             # Dropout 15%
             nn.Dropout(0.15, inplace=True))
 
+        # Build fully-connected layers with activations and dropout
         self.fc = nn.Sequential(
             # Fully-connected linear layer
             nn.Linear(2*2*20, 128),
@@ -64,9 +68,9 @@ class Net(nn.Module):
 
     def forward(self, x):
         ''' Compute feedforward '''
-        x = self.cnn(x)
-        x = self.fc(x)
-        return x
+        output = self.cnn(x)
+        output = self.fc(output)
+        return output
 
     def train(self, data, loss, epoch, optimizer, device='cpu'):
         ''' Train network with backpropagation '''
