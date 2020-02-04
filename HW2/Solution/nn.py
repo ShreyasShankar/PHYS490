@@ -8,61 +8,58 @@ class Net(nn.Module):
     '''
     Neural network class inherited from nn.Module.
     Architecture:
-        Convolution (10 filters)
-        ReLU
-        MaxPool
+        Convolution (5 filters, kernel 5, stride 1, 0 pad)
         BatchNorm
-        Convolution (20 filters)
-        MaxPool
         ReLU
+        Convolution (10 filters, kernel 3, stride 1, 0 pad)
         BatchNorm
+        MaxPool (kernel 2, stride 2)
+        ReLU
         Flatten
-        Dropout
-        Fully-connected
+        Fully-connected (64 neurons)
         ReLU
-        Dropout
-        Fully-connected
+        BatchNorm
+        Dropout (40%)
+        Fully-connected (output, 5 neurons)
         Softmax
     '''
 
     def __init__(self):
-        ''' Initialize network sequentially '''
+        ''' Build convolutional neural network sequentially '''
         # Inherit
         super(Net, self).__init__()
 
-        # Build convolution layers with activations, pooling, and dropout
+        # Build convolution layers with activations, batchnorm, pooling
         self.cnn = nn.Sequential(
-            # First convolution layer with 10 filters, kernel 5, stride 1, padded
-            nn.Conv2d(1, 10, kernel_size=5, padding=1),
+            # First convolution layer with 5 filters, kernel 3, stride 1, 0 pad
+            nn.Conv2d(1, 5, kernel_size=5),  # (14, 14, 1) -> (10, 10, 5)
+            # Batch Normalization
+            nn.BatchNorm2d(num_features=5),
             # ReLU
-            nn.ReLU(inplace=False),
-            # MaxPool 12*12*10 to 6*6*10
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.ReLU(),
+            # Second convolution layer with 10 filters, kernel 3, stride 1, 0 pad
+            nn.Conv2d(5, 10, kernel_size=3),  # (10, 10, 5) -> (8, 8, 10)
             # Batch Normalization
             nn.BatchNorm2d(num_features=10),
-            # Second convolution layer with 20 filters, kernel 3, stride 1, no pad
-            nn.Conv2d(10, 20, kernel_size=3),
-            # MaxPool 4*4*20 to 2*2*20
+            # MaxPool 8*8*10 to 4*4*10
             nn.MaxPool2d(kernel_size=2, stride=2),
             # ReLU
-            nn.ReLU(inplace=False),
-            # Batch Normalization
-            nn.BatchNorm2d(num_features=20),
+            nn.ReLU(),
             # Flatten
-            nn.Flatten(),
-            # Dropout 15%
-            nn.Dropout(0.15, inplace=False))
+            nn.Flatten())
 
-        # Build fully-connected layers with activations and dropout
+        # Build fully-connected layers with activations, batchnorm, dropout
         self.fc = nn.Sequential(
             # Fully-connected linear layer
-            nn.Linear(2*2*20, 128),
+            nn.Linear(4*4*10, 64),
             # ReLU
-            nn.ReLU(inplace=False),
-            # Dropout 50%
-            nn.Dropout(inplace=False),
+            nn.ReLU(),
+            # Batch Normalization
+            nn.BatchNorm1d(64),
+            # Dropout 40%
+            nn.Dropout(0.4, inplace=True),
             # Final fully-connected linear layer
-            nn.Linear(128, 5),
+            nn.Linear(64, 5),
             # Softmax
             nn.Softmax(dim=1))
 
