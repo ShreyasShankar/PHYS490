@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
+from load_data import Data
+from nn import Net
+
 import torch
 import json
 import argparse
 import os
 from tqdm import tqdm
 import torch.optim as optim
-from nn import Net
-from load_data import Data
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style("darkgrid")
@@ -25,16 +26,16 @@ def get_args():
                         help='Path to .csv file containing the 14x14 dataset')
     parser.add_argument('-r', '--results', default=False,
                         metavar='./results',
-                        help='Directory where results should be saved, if desired')
+                        help='Directory where loss plot should be saved, if desired. Results will be saved to file only if path is provided')
     parser.add_argument('-v', '--verbose', type=bool, default=False,
                         help='Boolean flag for high verbosity output')
     parser.add_argument('-c', '--cuda', type=bool, default=False,
-                        help='Boolean flag indicating whether or not to use GPU')
+                        help='Boolean flag indicating whether or not to use CUDA GPU')
 
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
     args = get_args()
     with open(args.params) as p:
         params = json.load(p)
@@ -47,8 +48,8 @@ if __name__ == '__main__':
     model = Net().to(device)
     data = Data(data_file=args.data, test_size=int(params['test_size']))
 
-    # Define SGD optimizer and multi-class cross entropy loss function
-    optimizer = optim.SGD(model.parameters(), lr=params['learning_rate'])
+    # Define Adam optimizer and multi-class cross entropy loss function
+    optimizer = optim.Adam(model.parameters(), lr=params['learning_rate'])
     loss = torch.nn.CrossEntropyLoss()
 
     # Training and evaluation cycle
@@ -90,3 +91,7 @@ if __name__ == '__main__':
             os.mkdir(args.results)
         plt.savefig(os.path.join(args.results, 'loss_report.png'), dpi=600)
     plt.show()
+
+
+if __name__ == '__main__':
+    main()
