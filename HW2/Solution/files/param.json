@@ -1,0 +1,6 @@
+{
+	"test_size": 3000,
+	"learning_rate": 0.7,
+	"num_epochs": 500,
+	"display_epochs": 25
+}
