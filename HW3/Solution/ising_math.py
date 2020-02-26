@@ -17,15 +17,12 @@ def get_H(chain, J):
     Returns the hamiltonian H of a single chain, provided a list of coupler strengths J.
     Note: len(chain) must match len(J)
     '''
-    assert len(chain) == len(J)
-
     x = []
-    for i, char in np.ndenumerate(chain):
-        val = get_S(char)*get_S(chain[(i+1) % len(chain)])
-        val *= J[i]
+    for i in range(len(chain)):
+        val = get_S(chain[i])*get_S(chain[(i+1) % 4]) * J[i]
         x.append(val)
     H = - np.sum(x)
-    return H
+    return int(H)
 
 
 def get_Z(chains, J):
@@ -33,9 +30,9 @@ def get_Z(chains, J):
     Returns the partition function Z for the full dataset, for the given coupler strengths J, assuming thermodynamic beta=1 (omitted from calculation).
     '''
     x = []
-    for chain in np.nditer(chains):
+    for chain in chains:
         H = get_H(chain, J)
-        x = np.exp(-H)
+        x.append(np.exp(- H))
     Z = np.sum(x)
     return Z
 
@@ -46,8 +43,8 @@ def get_P(chains, J):
     '''
     Z = get_Z(chains, J)
     P = []
-    for chain in np.nditer(chains):
-        x = np.exp(-get_H(chain, J))
+    for chain in chains:
+        x = np.exp(- get_H(chain, J))
         P.append(x/Z)
     return P
 
@@ -67,10 +64,10 @@ def get_E(chains, P):
     return E
 
 
-def grad(chains, J, prior_P):
+def grad(chains, J, true_P):
     ''' Compute gradient for training purposes '''
-    P = get_P(chains, J)
-    prior_E = np.array(get_E(chains, prior_P))
-    new_E = np.array(get_E(chains, P))
-    grad = np.subtract(prior_E, new_E)
+    pred_P = get_P(chains, J)
+    true_E = np.array(get_E(chains, true_P))
+    pred_E = np.array(get_E(chains, pred_P))
+    grad = np.subtract(true_E, pred_E)
     return grad
