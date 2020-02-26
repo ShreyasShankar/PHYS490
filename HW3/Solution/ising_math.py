@@ -20,7 +20,7 @@ def get_H(chain, J):
     assert len(chain) == len(J)
 
     x = []
-    for i, char in enumerate(chain):
+    for i, char in np.ndenumerate(chain):
         val = get_S(char)*get_S(chain[(i+1) % len(chain)])
         val *= J[i]
         x.append(val)
@@ -33,7 +33,7 @@ def get_Z(chains, J):
     Returns the partition function Z for the full dataset, for the given coupler strengths J, assuming thermodynamic beta=1 (omitted from calculation).
     '''
     x = []
-    for chain in chains:
+    for chain in np.nditer(chains):
         H = get_H(chain, J)
         x = np.exp(-H)
     Z = np.sum(x)
@@ -46,7 +46,7 @@ def get_P(chains, J):
     '''
     Z = get_Z(chains, J)
     P = []
-    for chain in chains:
+    for chain in np.nditer(chains):
         x = np.exp(-get_H(chain, J))
         P.append(x/Z)
     return P
