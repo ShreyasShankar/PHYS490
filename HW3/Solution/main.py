@@ -9,6 +9,7 @@ import json
 import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
+from collections import Counter
 import matplotlib.pyplot as plt
 
 
@@ -38,8 +39,53 @@ def run():
 
     data = np.loadtxt(args.data, dtype=str)
     J = np.random.choice([-1, 1], size=4)  # Random initialization of J
-    loss = nn.KLDivLoss(reduction='batchmean')
+    loss_fn = nn.KLDivLoss(reduction='batchmean')
     train_loss = []
+
+    chain_dict = Counter(data)
+    chain_P = np.array(list(chain_dict.values())) / 1000
+    unique_chains = np.array(list(chain_dict.keys()))
+
+    epochs = int(params['num_epochs'])
+    print('Training over {} epochs:'.format(epochs))
+    with tqdm(total=epochs, dynamic_ncols=True) as pbar:
+        for epoch in range(1, epochs+1):
+            # Training
+            Z = get_Z(unique_chains, J)
+            predicted_P = torch.from_numpy(np.log(get_P(unique_chains, J)))
+            true_P = torch.from_numpy(chain_P)
+
+            # loss
+            loss = loss_fn(predicted_P, true_P)
+            train_loss.append(loss)
+
+            # Grad Update
+            gradient = grad(unique_chains, J, chain_P)
+            J += lr*np.array(gradient)
+
+            # Update progress bar
+            pbar.update()
+
+            # High verbosity report
+            if args.verbose:
+                if not ((epoch) % params['display_epochs']):
+                    print('\nEpoch [{}/{}]'.format(epoch, epochs)
+                          + '\tLoss: {:.4f}'.format(loss))
+
+    # Final loss report
+    print('Final training loss: {:.4f}'.format(train_loss[-1]))
+
+    rounded_J = np.round(J, 0)
+
+    # Plot loss and save results if desired
+    # plt.plot(range(1, epochs+1), obj_vals, label='Training loss', color='blue')
+    # plt.plot(range(1, epochs+1), cross_vals, label='Test loss', color='green')
+    # plt.legend()
+    # if args.results:
+    #     if not os.path.exists(args.results):
+    #         os.mkdir(args.results)
+    #     plt.savefig(os.path.join(args.results, 'loss_report.png'), dpi=600)
+    # plt.show()
 
 
 if __name__ == '__main__':
