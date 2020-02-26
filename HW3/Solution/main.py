@@ -22,9 +22,9 @@ def get_args():
     parser.add_argument('-d', '--data', type=str, metavar='../Problem/in.txt',
                         default='../Problem/in.txt',
                         help='Path to .txt file containing the dataset')
-    parser.add_argument('-r', '--results', default=False,
+    parser.add_argument('-r', '--results', type=str, default='./results',
                         metavar='./results',
-                        help='Directory where loss plot should be saved, if desired. Results will be saved to file only if path is provided')
+                        help='Directory where loss plot and output text file should be saved')
     parser.add_argument('-v', '--verbose', type=bool, default=False,
                         help='Boolean flag for high verbosity output')
 
@@ -38,7 +38,7 @@ def run():
         params = json.load(p)
 
     data = np.loadtxt(args.data, dtype=str)
-    J = np.random.choice([-1, 1], size=4)  # Random initialization of J
+    J = np.random.choice([-1., 1.], size=4)  # Random initialization of J
     loss_fn = nn.KLDivLoss(reduction='batchmean')
     train_loss = []
 
@@ -47,21 +47,24 @@ def run():
     unique_chains = np.array(list(chain_dict.keys()))
 
     epochs = int(params['num_epochs'])
+    lr = params['learning_rate']
+
     print('Training over {} epochs:'.format(epochs))
     with tqdm(total=epochs, dynamic_ncols=True) as pbar:
         for epoch in range(1, epochs+1):
             # Training
-            Z = get_Z(unique_chains, J)
-            predicted_P = torch.from_numpy(np.log(get_P(unique_chains, J)))
+            Z = get_Z(unique_chains.tolist(), J)
+            predicted_P = torch.from_numpy(
+                np.log(get_P(unique_chains.tolist(), J)))
             true_P = torch.from_numpy(chain_P)
 
             # loss
             loss = loss_fn(predicted_P, true_P)
             train_loss.append(loss)
 
-            # Grad Update
+            # Gradient update
             gradient = grad(unique_chains, J, chain_P)
-            J += lr*np.array(gradient)
+            J += lr*gradient
 
             # Update progress bar
             pbar.update()
@@ -75,17 +78,24 @@ def run():
     # Final loss report
     print('Final training loss: {:.4f}'.format(train_loss[-1]))
 
-    rounded_J = np.round(J, 0)
+    rounded_J = list(np.round(J, 0).astype(int))
+    output = {}
+    for i, j in enumerate(rounded_J):
+        output[(i, (i+1) % 4)] = j
+    print(str(output))
 
     # Plot loss and save results if desired
-    # plt.plot(range(1, epochs+1), obj_vals, label='Training loss', color='blue')
-    # plt.plot(range(1, epochs+1), cross_vals, label='Test loss', color='green')
-    # plt.legend()
-    # if args.results:
-    #     if not os.path.exists(args.results):
-    #         os.mkdir(args.results)
-    #     plt.savefig(os.path.join(args.results, 'loss_report.png'), dpi=600)
-    # plt.show()
+    plt.plot(range(1, epochs+1), train_loss, color='blue')
+    plt.title('KL Divergence Loss over %i Training Epochs' % epochs)
+    plt.ylabel('KL Divergence Loss')
+    plt.xlabel('Training Epochs')
+    if args.results:
+        if not os.path.exists(args.results):
+            os.mkdir(args.results)
+        plt.savefig(os.path.join(args.results, 'loss_report.png'), dpi=600)
+        with open(os.path.join(args.results, 'out.txt'), 'w') as f:
+            f.write(str(output))
+    plt.show()
 
 
 if __name__ == '__main__':
