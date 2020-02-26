@@ -25,7 +25,6 @@ def get_H(chain, J):
         val *= J[i]
         x.append(val)
     H = - np.sum(x)
-
     return H
 
 
@@ -38,7 +37,6 @@ def get_Z(chains, J):
         H = get_H(chain, J)
         x = np.exp(-H)
     Z = np.sum(x)
-
     return Z
 
 
@@ -51,12 +49,28 @@ def get_P(chains, J):
     for chain in chains:
         x = np.exp(-get_H(chain, J))
         P.append(x/Z)
-
     return P
 
 
 def get_E(chains, P):
     '''
-    Returns the expectation values for pairs of chains for the given probability distribution P
+    Returns the expectation values for neighbouring pairs of chains for the given probability distribution P
     '''
-    
+    E = []
+    for S1 in range(4):  # Because chain length is 4
+        S2 = (S1 + 1) % 4
+        x = []
+        for i in range(2**4):
+            val = get_S(chains[i][S1])*get_S(chains[i][S2]) * P[i]
+            x.append(val)
+        E.append(np.sum(x))
+    return E
+
+
+def grad(chains, J, prior_P):
+    ''' Compute gradient for training purposes '''
+    P = get_P(chains, J)
+    prior_E = np.array(get_E(chains, prior_P))
+    new_E = np.array(get_E(chains, P))
+    grad = np.subtract(prior_E, new_E)
+    return grad
