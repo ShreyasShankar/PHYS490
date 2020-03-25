@@ -7,27 +7,9 @@ from random import randint
 
 
 class VAE(nn.Module):
-    '''
-    Neural network class inherited from nn.Module.
-    Architecture:
-        Convolution (5 filters, kernel 5, stride 1, 0 pad)
-        BatchNorm
-        ReLU
-        Convolution (10 filters, kernel 3, stride 1, 0 pad)
-        BatchNorm
-        MaxPool (kernel 2, stride 2)
-        ReLU
-        Flatten
-        Fully-connected (64 neurons)
-        ReLU
-        BatchNorm
-        Dropout (40%)
-        Fully-connected (output, 5 neurons)
-        Softmax
-    '''
-
+    ''' Neural network class inherited from nn.Module '''
     def __init__(self):
-        ''' Build convolutional neural network sequentially '''
+        ''' Build VAE sequentially '''
         # Inherit
         super(VAE, self).__init__()
 
@@ -135,13 +117,13 @@ class VAE(nn.Module):
         # Compute model output from inputs
         reconstruction, mu, logvar = self(inputs)
         # Compute loss
-        loss_val = self.loss(inputs, reconstruction, mu, logvar)
+        obj_val = self.loss(inputs, reconstruction, mu, logvar)
         # Propagate loss
-        loss_val.backward()
+        obj_val.backward()
         # Update optimizer
         optimizer.step()
         # Return loss for tracking and visualizing
-        return loss_val.item()
+        return obj_val.item()
 
     def test(self, test_size):
         ''' Test network on cross-validation data '''
