@@ -10,27 +10,24 @@ import os
 from tqdm import tqdm
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set_style("darkgrid")
 
 
 def get_args():
     ''' Parse arguments from CLI '''
     parser = argparse.ArgumentParser(
         description='Multi-label Variational Auto-encoder for the set of 14x14 even numbers from MNIST')
-    parser.add_argument('-p', '--params', type=str, metavar='./files/param.json',
-                        default='./files/param.json',
+    parser.add_argument('-p', '--params', type=str, default='./files/param.json',
                         help='Path to .json file containing hyperparameters')
-    parser.add_argument('-d', '--data', type=str, metavar='../Problem/even_mnist.csv',
-                        default='../Problem/even_mnist.csv',
+    parser.add_argument('-d', '--data', type=str, default='../Problem/even_mnist.csv',
                         help='Path to .csv file containing the 14x14 dataset')
-    parser.add_argument('-r', '--results', default=False,
-                        metavar='./results',
-                        help='Directory where loss plot should be saved, if desired. Results will be saved to file only if path is provided')
+    parser.add_argument('-r', '--results', default='./results',
+                        help='Directory where loss plot & output images should be saved')
     parser.add_argument('-v', '--verbose', type=bool, default=False,
                         help='Boolean flag for high verbosity output')
     parser.add_argument('-c', '--cuda', type=bool, default=False,
                         help='Boolean flag indicating whether or not to use CUDA GPU')
+    parser.add_argument('-n', '--num_images', type=int, default=100,
+                        help='Number of "handwritten" images to generate upon completion')
 
     return parser.parse_args()
 
@@ -50,11 +47,10 @@ def main():
     data = Data(data_file=args.data, test_size=test_size)
     model.init_data(data, device)
 
-    # Define Adam optimizer and multi-class cross entropy loss function
+    # Define Adam optimizer
     optimizer = optim.Adam(model.parameters(), lr=params['learning_rate'])
-    loss = torch.nn.CrossEntropyLoss()
 
-    # Training and evaluation cycle
+    ## Training and evaluation cycle
     # Initialize lists
     obj_vals = []
     cross_vals = []
@@ -86,15 +82,20 @@ def main():
     print('Final training loss: {:.4f}'.format(obj_vals[-1]))
     print('Final test loss: {:.4f}'.format(cross_vals[-1]))
 
-    # Plot loss and save results if desired
+    # Plot loss and save results
     plt.plot(range(1, epochs+1), obj_vals, label='Training loss', color='blue')
     plt.plot(range(1, epochs+1), cross_vals, label='Test loss', color='green')
+    plt.title('BCE + KLD Loss over %i Training Epochs' % epochs)
+    plt.ylabel('Loss')
+    plt.xlabel('Training Epochs')
     plt.legend()
     if args.results:
         if not os.path.exists(args.results):
             os.mkdir(args.results)
         plt.savefig(os.path.join(args.results, 'loss_report.png'), dpi=600)
     plt.show()
+
+    model.final_reconstruction(args.num_images, args.results, device)
 
 
 if __name__ == '__main__':
