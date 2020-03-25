@@ -80,7 +80,7 @@ class VAE(nn.Module):
     def forward(self, x):
         ''' Compute feedforward '''
         mu, logvar = self.encode(x)
-        z = sampling(mu, logvar)
+        z = self.sampling(mu, logvar)
         return self.decode(z), mu, logvar
 
     def loss(self, x, reconstruction, mu, logvar):
