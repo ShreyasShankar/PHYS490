@@ -3,7 +3,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from matplotlib import pyplot as plt, cm as cm
+import os.path as op
 from random import randint
+import math
 
 
 class VAE(nn.Module):
@@ -15,26 +18,26 @@ class VAE(nn.Module):
         super(VAE, self).__init__()
 
         # Standalone layers
-        lin_size = 300
-        self.fc1 = nn.Linear(4*4*10, lin_size)
-        self.fc21 = nn.Linear(lin_size, 20)
-        self.fc22 = nn.Linear(lin_size, 20)
-        # self.fc3 = nn.Linear(20, 100)
-        # self.fc4 = nn.Linear(100, 14*14)
+        lin_size = 200
+        self.fc1 = nn.Linear(7*7*10, lin_size)
+        self.fc21 = nn.Linear(lin_size, 10)
+        self.fc22 = nn.Linear(lin_size, 10)
 
         # Base encoder network
         self.encoder = nn.Sequential(
-            # First convolution layer with 5 filters, kernel 3, stride 1, 0 pad
-            nn.Conv2d(1, 5, kernel_size=5),  # (14, 14, 1) -> (10, 10, 5)
+            # First convolution layer with 5 filters, kernel 3, stride 1, 1 padding
+            # (14, 14, 1) -> (14, 14, 5)
+            nn.Conv2d(1, 5, kernel_size=3, padding=1, stride=1),
             # Batch Normalization
             nn.BatchNorm2d(num_features=5),
             # ReLU
             nn.ReLU(),
-            # Second convolution layer with 10 filters, kernel 3, stride 1, 0 pad
-            nn.Conv2d(5, 10, kernel_size=3),  # (10, 10, 5) -> (8, 8, 10)
+            # Second convolution layer with 10 filters, kernel 3, stride 1, 1 padding
+            # (14, 14, 5) -> (14, 14, 10)
+            nn.Conv2d(5, 10, kernel_size=3, stride=1, padding=1),
             # Batch Normalization
             nn.BatchNorm2d(num_features=10),
-            # MaxPool 8*8*10 to 4*4*10
+            # MaxPool 14*14*10 to 7*7*10
             nn.MaxPool2d(kernel_size=2, stride=2),
             # ReLU
             nn.ReLU(),
@@ -42,20 +45,20 @@ class VAE(nn.Module):
             nn.Flatten()
         )
 
-        # Build decoder network
+        # Decoder network
         self.decoder = nn.Sequential(
             # Fully-connected linear layer
-            nn.Linear(20, 100),
-            # nn.Linear(4*4*10, 64),
+            nn.Linear(10, lin_size),
             # ReLU
             nn.ReLU(),
-            # # Batch Normalization
-            # nn.BatchNorm1d(64),
+            # Batch Normalization
+            nn.BatchNorm1d(lin_size),
+            # Fully-connected linear layer
+            nn.Linear(lin_size, lin_size*2),
+            # ReLU
+            nn.ReLU(),
             # Final fully-connected linear layer
-            nn.Linear(100, 14*14),
-            # nn.Linear(64, 5),
-            # # Softmax
-            # nn.Softmax(dim=1)
+            nn.Linear(lin_size*2, 14*14),
             # Sigmoid
             nn.Sigmoid()
         )
@@ -86,7 +89,7 @@ class VAE(nn.Module):
     def loss(self, x, reconstruction, mu, logvar):
         ''' Reconstruction + KL divergence losses summed over all elements and batch '''
         BCE = F.binary_cross_entropy(
-            reconstruction, x.view(-1, 196), reduction='sum')
+            reconstruction, x.view(-1, 14*14), reduction='sum')
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
         return (BCE + KLD)/x.size(0)
 
@@ -96,10 +99,8 @@ class VAE(nn.Module):
         '''
         self.train_set = data.x_train
         self.test_set = data.x_test
-        # targets = data.y_train  #################
         self.train_set = self.train_set.to(device)
         self.test_set = self.test_set.to(device)
-        # targets = targets.to(device)  #################
 
     def batcher(self, inputs, batch_size):
         ''' Create batch from input data and batch_size '''
@@ -114,7 +115,6 @@ class VAE(nn.Module):
         optimizer.zero_grad()
         # Batching
         inputs = self.batcher(self.train_set, batch_size)
-        # targets = self.targets[batch_start: batch_start+batch_size]  #################
         # Compute model output from inputs
         reconstruction, mu, logvar = self(inputs)
         # Compute loss
@@ -132,12 +132,6 @@ class VAE(nn.Module):
         self.eval()
         # Deactivate autograd engine
         with torch.no_grad():
-            # # Get inputs and send them to the appropriate device (cpu or cuda)
-            # inputs = data.x_test
-            # targets = data.y_test
-            # inputs = inputs.to(device)
-            # targets = targets.to(device)
-
             # Batching
             inputs = self.batcher(self.test_set, test_size)
             # Compute model output from given inputs
@@ -146,3 +140,43 @@ class VAE(nn.Module):
             cross_val = self.loss(inputs, reconstruction, mu, logvar)
         # Return loss for tracking and visualizing
         return cross_val.item()
+
+    def is_square(self, n):
+        ''' Check if n is a perfect square using Newton's method '''
+        x = n // 2
+        y = set([x])
+        while x * x != n:
+            x = (x + (n // x)) // 2
+            if x in y:
+                return False
+            y.add(x)
+        return True
+
+    def subplotter(self, n):
+        ''' Based on input number's properties, determine subplot grid shape '''
+        if self.is_square(n):
+            return int(math.sqrt(n)), int(math.sqrt(n))
+        else:
+            if n >= 12:
+                return 4, math.ceil(n/4)
+            else:
+                return 2, math.ceil(n/2)
+
+    def final_reconstruction(self, n_images, path, device):
+        ''' Reconstruct n_images images '''
+        nrow, ncol = self.subplotter(n_images)  # Get subplot grid shape
+        with torch.no_grad():
+            for i in range(0, n_images):
+                # Generate n z-tensors from a uniform distribution
+                z_test = torch.randn(1, 10)
+                z_test = z_test.to(device)
+                # Reconstruct
+                reconstruction = self.decode(z_test)
+                image = reconstruction.view(-1, 14, 14).cpu().numpy()
+                plt.subplot(nrow, ncol, i+1)
+                plt.imshow(image[0, :, :], cmap=cm.gray)
+                plt.axis('off')
+            if path:
+                plt.savefig(
+                    op.join(path, '{}_nums.png'.format(n_images)), dpi=800)
+            plt.show()
