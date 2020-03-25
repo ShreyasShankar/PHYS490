@@ -8,6 +8,7 @@ from random import randint
 
 class VAE(nn.Module):
     ''' Neural network class inherited from nn.Module '''
+
     def __init__(self):
         ''' Build VAE sequentially '''
         # Inherit
@@ -38,7 +39,7 @@ class VAE(nn.Module):
             # ReLU
             nn.ReLU(),
             # Flatten
-            nn.Flatten())
+            nn.Flatten()
         )
 
         # Build decoder network
@@ -58,7 +59,6 @@ class VAE(nn.Module):
             # Sigmoid
             nn.Sigmoid()
         )
-
 
     def encode(self, x):
         x = self.encoder(x)
@@ -85,7 +85,8 @@ class VAE(nn.Module):
 
     def loss(self, x, reconstruction, mu, logvar):
         ''' Reconstruction + KL divergence losses summed over all elements and batch '''
-        BCE = F.binary_cross_entropy(reconstruction, x.view(-1, 196), reduction='sum')
+        BCE = F.binary_cross_entropy(
+            reconstruction, x.view(-1, 196), reduction='sum')
         KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
         return (BCE + KLD)/x.size(0)
 
@@ -93,11 +94,11 @@ class VAE(nn.Module):
         '''
         Extract training & testing data (without labels) and send them to appropriate device (cpu or gpu)
         '''
-        self.train = data.x_train
-        self.test - data.x_test
+        self.train_set = data.x_train
+        self.test_set = data.x_test
         # targets = data.y_train  #################
-        self.train = self.train.to(device)
-        self.test = self.test.to(device)
+        self.train_set = self.train_set.to(device)
+        self.test_set = self.test_set.to(device)
         # targets = targets.to(device)  #################
 
     def batcher(self, inputs, batch_size):
@@ -112,7 +113,7 @@ class VAE(nn.Module):
         # Initialize gradients to 0
         optimizer.zero_grad()
         # Batching
-        inputs = self.batcher(self.train, batch_size)
+        inputs = self.batcher(self.train_set, batch_size)
         # targets = self.targets[batch_start: batch_start+batch_size]  #################
         # Compute model output from inputs
         reconstruction, mu, logvar = self(inputs)
@@ -138,7 +139,7 @@ class VAE(nn.Module):
             # targets = targets.to(device)
 
             # Batching
-            inputs = self.batcher(self.test, test_size)
+            inputs = self.batcher(self.test_set, test_size)
             # Compute model output from given inputs
             reconstruction, mu, logvar = self(inputs)
             # Compute loss
